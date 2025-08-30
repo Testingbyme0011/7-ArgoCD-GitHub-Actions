@@ -27,7 +27,7 @@ jobs:
       run: |
         IMAGE="${{ secrets.DOCKER_USERNAME }}/gitops-app:${{ github.sha }}"
         echo "Using IMAGE=$IMAGE"
-        docker buildx build --platform linux/amd64 -t $IMAGE . --push
+        docker buildx build --platform linux/amd64 -t $IMAGE ./app --file ./app/Dockerfile --push
 
 
     - name: Commit & Push Manifests
