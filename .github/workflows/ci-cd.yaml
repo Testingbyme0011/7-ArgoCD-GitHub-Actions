@@ -23,7 +23,6 @@ jobs:
 
     - name: Build and Push Docker Image with Incremental Tag
       run: |
-        # Read current image tag from a TAG file (initialize with 1 if not present)
         if [ ! -f TAG ]; then
           echo "1" > TAG
         fi
@@ -31,29 +30,23 @@ jobs:
         CURRENT_TAG=$(cat TAG)
         echo "Current tag: $CURRENT_TAG"
 
-        # Increment tag
         NEXT_TAG=$((CURRENT_TAG + 1))
         echo "Next tag: $NEXT_TAG"
-
-        # Save next tag back to TAG file
         echo $NEXT_TAG > TAG
 
-        # Define Docker image
-        IMAGE="***/gitops-app:$NEXT_TAG"
+        IMAGE="${{ secrets.DOCKER_USERNAME }}/gitops-app:$NEXT_TAG"
         echo "Using IMAGE=$IMAGE"
 
-        # Build & push image
         docker buildx build --platform linux/amd64 -t $IMAGE -f ./app/Dockerfile ./app --push
 
-        # Update Kubernetes deployment with new image
         yq -i '.spec.template.spec.containers[0].image = env(IMAGE)' k8s/deployment.yaml
 
-        # Commit updated TAG + deployment.yaml
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git add TAG k8s/deployment.yaml
         git commit -m "Release image:$NEXT_TAG" || echo "No changes to commit"
         git push origin main
+
 
 
 
