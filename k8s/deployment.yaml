@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: gitops-app
-        image: 91197/gitops-app:latest   # 🔑 This will be updated by GitHub Actions
+        image: 91197/gitops-app   # 🔑 This will be updated by GitHub Actions
         ports:
         - containerPort: 80
