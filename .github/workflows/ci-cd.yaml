@@ -23,32 +23,23 @@ jobs:
 
     - name: Build and Push Docker Image
       run: |
-        # Read current version
-        CURRENT_VERSION=$(cat VERSION)
-        echo "Current version: $CURRENT_VERSION"
-
-        # Extract major.minor
-        BASE_VERSION=$(echo $CURRENT_VERSION | cut -d. -f1)
-        NEXT_VERSION=$((BASE_VERSION + 1)).0
-
-        echo "Next version: $NEXT_VERSION"
-        echo $NEXT_VERSION > VERSION
-
-        IMAGE="${{ secrets.DOCKER_USERNAME }}/gitops-app:$NEXT_VERSION"
+        # Use GitHub SHA as image tag
+        IMAGE="${{ secrets.DOCKER_USERNAME }}/gitops-app:${GITHUB_RUN_NUMBER}"
         echo "Using IMAGE=$IMAGE"
 
         # Build & push image
         docker buildx build --platform linux/amd64 -t $IMAGE . --push
 
-        # Update Kubernetes deployment
+        # Update Kubernetes deployment with new image
         yq -i '.spec.template.spec.containers[0].image = env(IMAGE)' k8s/deployment.yaml
 
-        # Commit version + deployment.yaml changes
+        # Commit the updated deployment.yaml
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
-        git add VERSION k8s/deployment.yaml
-        git commit -m "Release $NEXT_VERSION"
+        git add k8s/deployment.yaml
+        git commit -m "Update deployment to image $IMAGE"
         git push origin main
+
 
         
 
