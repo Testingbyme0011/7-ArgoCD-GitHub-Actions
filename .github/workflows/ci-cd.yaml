@@ -3,7 +3,8 @@ name: CI-CD Pipeline
 on:
   push:
     branches: [ "main" ]
-
+permissions:
+    contents: write
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -17,15 +18,17 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Install yq
+      run: sudo apt-get install -y jq && sudo wget -O /usr/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 && sudo chmod +x /usr/bin/yq
+     
+        
 
     - name: Build and Push Docker Image
       run: |
-        IMAGE=91197/gitops-app:1.0
+        yq -i '.spec.template.spec.containers[0].image = "${{ secrets.DOCKER_USERNAME }}/gitops-app:${{ github.sha }}"' k8s/deployment.yaml
         docker build -t $IMAGE ./app
         docker push $IMAGE
 
-        # Update deployment.yaml with new image
-        sed -i "s|91197/gitops-app:1.0|$IMAGE|" k8s/deployment.yaml
 
     - name: Commit & Push Manifests
       run: |
@@ -34,3 +37,5 @@ jobs:
         git add k8s/deployment.yaml
         git commit -m "Update image to $IMAGE"
         git push origin main
+
+
