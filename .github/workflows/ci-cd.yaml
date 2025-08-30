@@ -23,29 +23,39 @@ jobs:
 
     - name: Build and Push Docker Image with Incremental Tag
       run: |
+        # Initialize TAG file if missing
         if [ ! -f TAG ]; then
-          echo "1" > TAG
+          echo "1.0" > TAG
         fi
 
         CURRENT_TAG=$(cat TAG)
         echo "Current tag: $CURRENT_TAG"
 
-        NEXT_TAG=$((CURRENT_TAG + 1))
+        # Extract major version (before .0)
+        BASE_VERSION=$(echo $CURRENT_TAG | cut -d. -f1)
+
+        # Increment major version and append .0
+        NEXT_TAG=$((BASE_VERSION + 1)).0
         echo "Next tag: $NEXT_TAG"
         echo $NEXT_TAG > TAG
 
         IMAGE="${{ secrets.DOCKER_USERNAME }}/gitops-app:$NEXT_TAG"
         echo "Using IMAGE=$IMAGE"
 
+        # Build & push image
         docker buildx build --platform linux/amd64 -t $IMAGE -f ./app/Dockerfile ./app --push
 
-        yq -i '.spec.template.spec.containers[0].image = env(IMAGE)' k8s/deployment.yaml
+        # Export IMAGE so yq can use it
+        export IMAGE=$IMAGE
+        yq -i '.spec.template.spec.containers[0].image = strenv(IMAGE)' k8s/deployment.yaml
 
+        # Commit TAG + deployment.yaml
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git add TAG k8s/deployment.yaml
         git commit -m "Release image:$NEXT_TAG" || echo "No changes to commit"
         git push origin main
+
 
 
 
