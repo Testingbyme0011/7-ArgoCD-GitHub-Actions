@@ -21,9 +21,25 @@ jobs:
     - name: Install yq
       run: sudo apt-get install -y jq && sudo wget -O /usr/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 && sudo chmod +x /usr/bin/yq
 
-    - name: Build and Push Docker Image
+    - name: Build and Push Docker Image with Incremental Tag
       run: |
-        IMAGE="***/gitops-app:${GITHUB_RUN_NUMBER}"
+        # Read current image tag from a TAG file (initialize with 1 if not present)
+        if [ ! -f TAG ]; then
+          echo "1" > TAG
+        fi
+
+        CURRENT_TAG=$(cat TAG)
+        echo "Current tag: $CURRENT_TAG"
+
+        # Increment tag
+        NEXT_TAG=$((CURRENT_TAG + 1))
+        echo "Next tag: $NEXT_TAG"
+
+        # Save next tag back to TAG file
+        echo $NEXT_TAG > TAG
+
+        # Define Docker image
+        IMAGE="***/gitops-app:$NEXT_TAG"
         echo "Using IMAGE=$IMAGE"
 
         # Build & push image
@@ -32,12 +48,14 @@ jobs:
         # Update Kubernetes deployment with new image
         yq -i '.spec.template.spec.containers[0].image = env(IMAGE)' k8s/deployment.yaml
 
-        # Commit the updated deployment.yaml
+        # Commit updated TAG + deployment.yaml
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
-        git add k8s/deployment.yaml
-        git commit -m "Update deployment to image $IMAGE" || echo "No changes to commit"
+        git add TAG k8s/deployment.yaml
+        git commit -m "Release image:$NEXT_TAG" || echo "No changes to commit"
         git push origin main
+
+
 
 
 
