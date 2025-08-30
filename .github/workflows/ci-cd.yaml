@@ -25,8 +25,8 @@ jobs:
 
     - name: Build and Push Docker Image
       run: |
-        yq -i '.spec.template.spec.containers[0].image = "${{ secrets.DOCKER_USERNAME }}/gitops-app:${{ github.sha }}"' k8s/deployment.yaml
-        echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+        IMAGE="${{ secrets.DOCKER_USERNAME }}/gitops-app:${{ github.sha }}"
+        echo "Using IMAGE=$IMAGE"
         docker buildx build --platform linux/amd64 -t $IMAGE . --push
 
 
