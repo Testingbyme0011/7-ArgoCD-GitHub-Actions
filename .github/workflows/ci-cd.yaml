@@ -20,12 +20,12 @@ jobs:
 
     - name: Build and Push Docker Image
       run: |
-        IMAGE=dockerhub-username/gitops-app:${{ github.sha }}
+        IMAGE=91197/gitops-app:${{ github.sha }}
         docker build -t $IMAGE ./app
         docker push $IMAGE
 
         # Update deployment.yaml with new image
-        sed -i "s|dockerhub-username/gitops-app:.*|$IMAGE|" k8s/deployment.yaml
+        sed -i "s|91197/gitops-app:.*|$IMAGE|" k8s/deployment.yaml
 
     - name: Commit & Push Manifests
       run: |
